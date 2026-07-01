@@ -7,8 +7,7 @@ __pycache__/
 .venv/
 venv/
 
-# Local database
-db/
+# Local database file (keep db/schema.sql, db/seed.py, db/__init__.py)
 *.db
 *.sqlite3
 
