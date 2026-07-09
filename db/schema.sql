@@ -60,26 +60,18 @@ CREATE TABLE IF NOT EXISTS AlertConfig (
     config_value TEXT
 );
 
--- ---------- Enquiry ----------
+-- ---------- Enquiry (free-text capture — the structured job breakdown happens at Create Job) ----------
+-- Note: customer is stored as free text here, NOT a FK. Enquiries never touch the
+-- customer master; the master row is created/updated only on the Customer Master page
+-- or when the enquiry is turned into a job on Create Job.
 CREATE TABLE IF NOT EXISTS Enquiry (
-    enquiry_id   INTEGER PRIMARY KEY AUTOINCREMENT,
-    enquiry_date TEXT,
-    source_id    INTEGER REFERENCES Sources(source_id),
-    customer_id  INTEGER REFERENCES Customers(customer_id),
-    item_id      INTEGER REFERENCES Items(item_id),
-    job_type_id  INTEGER REFERENCES JobTypes(job_type_id),
-    status       TEXT DEFAULT 'Pending',                     -- Pending / Converted / Cancelled
+    enquiry_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    enquiry_date  TEXT,
+    source_id     INTEGER REFERENCES Sources(source_id),
+    customer_name TEXT,                                      -- free-text party name (no master link)
+    status        TEXT DEFAULT 'Pending',                    -- Pending / Converted / Cancelled
     source_contact TEXT,                                     -- email / number captured for the source
-    remarks      TEXT
-);
-
--- ---------- EnquiryItem (line items — materials per job type on an enquiry) ----------
-CREATE TABLE IF NOT EXISTS EnquiryItem (
-    enquiry_item_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    enquiry_id      INTEGER REFERENCES Enquiry(enquiry_id),
-    job_type_id     INTEGER REFERENCES JobTypes(job_type_id),
-    item_id         INTEGER REFERENCES Items(item_id),
-    quantity        REAL NOT NULL DEFAULT 1
+    remarks       TEXT                                       -- what the customer asked about (free text)
 );
 
 -- ---------- Bill (job header) ----------

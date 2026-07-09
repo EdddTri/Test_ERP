@@ -103,37 +103,23 @@ def seed_data(conn):
         ],
     )
 
-    # ---------- Enquiries ----------
+    # ---------- Enquiries (free-text — customer is just a name string, no master link) ----------
     c.executemany(
-        "INSERT INTO Enquiry (enquiry_date, source_id, customer_id, item_id, "
-        "job_type_id, status, source_contact, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO Enquiry (enquiry_date, source_id, customer_name, "
+        "status, source_contact, remarks) VALUES (?, ?, ?, ?, ?, ?)",
         [
             # Aged pending enquiry (6 days old) -> triggers the ⚠️ aging alert.
-            # Multi-type: Print AND Binding (primary type/item = Print / A4 Brochure).
-            (_d(-6), EMAIL, ACME, 1, PRINT, "Pending", "orders@acmepub.com",
+            (_d(-6), EMAIL, "Acme Publishing House", "Pending", "orders@acmepub.com",
              "5000 A4 brochures + spiral binding for the set — urgent"),
             # Fresh pending enquiry (1 day old)
-            (_d(-1), WHATSAPP, RIVERSIDE, 3, PRINT, "Pending", "+91 98200 44444",
+            (_d(-1), WHATSAPP, "Riverside Wedding Planners", "Pending", "+91 98200 44444",
              "Quote requested for 300 wedding invitation cards"),
             # Already converted into Bill #1
-            (_d(-9), PHONE, SCHOOL, 4, BINDING, "Converted", "+91 98200 22222",
+            (_d(-9), PHONE, "Bright Future School", "Converted", "+91 98200 22222",
              "Annual yearbook — print, bind and laminate"),
         ],
     )
     ENQ_AGED, ENQ_FRESH, ENQ_CONVERTED = 1, 2, 3
-
-    # Per-type materials on each enquiry (EnquiryItem line items).
-    #   item ids: 1=A4 Brochure, 3=Wedding Invitation Cards, 4=Hardcover, 5=Spiral Binding
-    c.executemany(
-        "INSERT INTO EnquiryItem (enquiry_id, job_type_id, item_id, quantity) "
-        "VALUES (?, ?, ?, ?)",
-        [
-            (ENQ_AGED, PRINT, 1, 50),      # Print: A4 Brochure
-            (ENQ_AGED, BINDING, 5, 20),    # Binding: Spiral Binding
-            (ENQ_FRESH, PRINT, 3, 300),    # Print: Wedding Invitation Cards
-            (ENQ_CONVERTED, BINDING, 4, 200),  # Binding: Hardcover Book Binding
-        ],
-    )
 
     # ---------- Bill #1: mid-workflow, all-three job types ----------
     # Print done, Binding in progress, Other + Binding-2 pending. Partly paid.

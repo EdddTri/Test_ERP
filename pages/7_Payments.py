@@ -18,7 +18,7 @@ bills = query(
            b.payment_status, b.overall_status
     FROM Bill b
     JOIN Customers c ON b.customer_id = c.customer_id
-    JOIN Items i     ON b.item_id = i.item_id
+    LEFT JOIN Items i ON b.item_id = i.item_id
     ORDER BY b.bill_id DESC
     """
 )
@@ -36,7 +36,7 @@ if bills:
             {
                 "Bill #": b["bill_id"],
                 "Customer": b["customer_name"],
-                "Item": b["item_name"],
+                "Item": b["item_name"] or "—",
                 "Total": f"₹{b['total_amount']:,.0f}",
                 "Paid": f"₹{paid:,.0f}",
                 "Due": f"₹{due:,.0f}",

@@ -116,8 +116,8 @@ back to the bill's order value if items aren't priced.
   consumes *different* materials at each stage. Items are attached **per stage**, and
   each stage issues its own materials on completion. `Bill.item_id` is kept only as a
   representative "primary item" for header displays.
-- **`EnquiryItem`** (`enquiry_id, job_type_id, item_id, quantity`) — an enquiry can
-  span **several job types** (e.g. Print *and* Binding), each with its own materials.
-  On "Convert to Job" the enquiry's job types are pre-ticked and its materials flow
-  into the matching stage editors. `Enquiry.job_type_id`/`item_id` are kept as the
-  primary type/item for header displays.
+- **`Enquiry`** is a lightweight, **free-text** capture — customer, source/contact,
+  and a remarks note of what they want. It intentionally carries **no** job-type or
+  material structure; that breakdown is decided later on **Create Job**. On "Convert
+  to Job" the customer is pre-selected and the enquiry note flows into the job
+  description, but the operator picks the job type(s) and materials fresh.

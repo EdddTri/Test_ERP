@@ -61,7 +61,6 @@ items = query(
     """
     SELECT i.item_id, i.item_name, i.unit_of_measure, i.rate, jt.job_type_name,
            COALESCE(s.quantity_available, 0) AS qty, COALESCE(s.reorder_level, 0) AS reorder,
-           (SELECT COUNT(DISTINCT enquiry_id) FROM EnquiryItem ei WHERE ei.item_id = i.item_id) AS enquiries,
            (SELECT COUNT(DISTINCT bill_id)    FROM BillItem bi   WHERE bi.item_id = i.item_id) AS bills
     FROM Items i
     JOIN JobTypes jt ON i.job_type_id = jt.job_type_id
@@ -86,7 +85,6 @@ else:
                 "Rate": it["rate"],
                 "Available": it["qty"],
                 "Reorder": it["reorder"],
-                "Enquiries": it["enquiries"],
                 "Bills": it["bills"],
             }
             for it in items
@@ -104,7 +102,6 @@ else:
             "Available": st.column_config.NumberColumn("Available", disabled=True,
                                                        help="Manage stock on the Stock page"),
             "Reorder": st.column_config.NumberColumn("Reorder", min_value=0, step=5),
-            "Enquiries": st.column_config.NumberColumn("Enquiries", disabled=True),
             "Bills": st.column_config.NumberColumn("Bills", disabled=True),
         },
         num_rows="fixed", hide_index=True, width="stretch", key="item_editor",

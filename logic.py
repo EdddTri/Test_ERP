@@ -294,92 +294,23 @@ def bill_document_html(bill_id):
 
 
 # --------------------------------------------------------------------------- #
-# Enquiry line items  (materials per job type captured when logging an enquiry)
+# Enquiry  (a lightweight, free-text capture — no structured job breakdown)
 # --------------------------------------------------------------------------- #
-def add_enquiry_item(enquiry_id, job_type_id, item_id, quantity):
-    return execute(
-        "INSERT INTO EnquiryItem (enquiry_id, job_type_id, item_id, quantity) "
-        "VALUES (?, ?, ?, ?)",
-        (enquiry_id, job_type_id, item_id, quantity),
-    )
-
-
-def get_enquiry_items(enquiry_id, job_type_id=None):
-    sql = (
-        "SELECT ei.*, i.item_name, i.unit_of_measure, jt.job_type_name "
-        "FROM EnquiryItem ei "
-        "JOIN Items i    ON ei.item_id = i.item_id "
-        "JOIN JobTypes jt ON ei.job_type_id = jt.job_type_id "
-        "WHERE ei.enquiry_id = ?"
-    )
-    params = [enquiry_id]
-    if job_type_id is not None:
-        sql += " AND ei.job_type_id = ?"
-        params.append(job_type_id)
-    sql += " ORDER BY jt.job_type_id, i.item_name"
-    return query(sql, tuple(params))
-
-
-def enquiry_job_types(enquiry_id):
-    """Distinct job type names on an enquiry, in canonical Print→Binding→Other order."""
-    rows = query(
-        "SELECT DISTINCT jt.job_type_name FROM EnquiryItem ei "
-        "JOIN JobTypes jt ON ei.job_type_id = jt.job_type_id "
-        "WHERE ei.enquiry_id = ? ORDER BY jt.job_type_id",
-        (enquiry_id,),
-    )
-    return [r["job_type_name"] for r in rows]
-
-
-def enquiry_items_summary(enquiry_id):
-    rows = get_enquiry_items(enquiry_id)
-    if not rows:
-        return "—"
-    return ", ".join(f"{r['item_name']} ×{int(r['quantity'])}" for r in rows)
-
-
-def create_enquiry(source_id, customer_id, remarks, line_items,
+def create_enquiry(source_id, customer_name, remarks,
                    source_contact=None, status="Pending"):
     """
-    Log an enquiry plus its per-type materials.
-
-    `line_items` is a list of (job_type_id, item_id, quantity). The first one's
-    type/item is stored on the Enquiry header (primary). `line_items` may be empty
-    (e.g. a Cancelled / dead enquiry logged for the record). `status` is normally
-    'Pending' but can be 'Cancelled' to record a dead enquiry straight away.
+    Log an enquiry as free-text: who asked, how they reached out, and what they
+    want (remarks). The customer name is stored as plain text — logging an enquiry
+    never creates or edits a customer-master row; that happens only on the Customer
+    Master page or when the enquiry is turned into a job. The breakdown into job
+    types and materials happens later on Create Job. `status` is normally 'Pending'
+    but can be 'Cancelled' to record a dead enquiry straight away.
     """
-    primary_type_id = line_items[0][0] if line_items else None
-    primary_item_id = line_items[0][1] if line_items else None
-    enquiry_id = execute(
-        "INSERT INTO Enquiry (enquiry_date, source_id, customer_id, item_id, "
-        "job_type_id, status, source_contact, remarks) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (now_str()[:10], source_id, customer_id, primary_item_id, primary_type_id,
-         status, source_contact, remarks),
+    return execute(
+        "INSERT INTO Enquiry (enquiry_date, source_id, customer_name, "
+        "status, source_contact, remarks) VALUES (?, ?, ?, ?, ?, ?)",
+        (now_str()[:10], source_id, customer_name, status, source_contact, remarks),
     )
-    for job_type_id, item_id, quantity in line_items:
-        add_enquiry_item(enquiry_id, job_type_id, item_id, quantity)
-    return enquiry_id
-
-
-def apply_enquiry_contact(customer_id, source_name, contact):
-    """
-    Fill the customer's email/phone from the enquiry's source contact, if empty.
-
-    Email source -> Customers.email; WhatsApp / Phone Call -> Customers.phone.
-    Never overwrites a value the customer already has.
-    """
-    contact = (contact or "").strip()
-    if not contact or not customer_id:
-        return
-    if source_name == "Email":
-        cust = query_one("SELECT email FROM Customers WHERE customer_id = ?", (customer_id,))
-        if cust and not (cust["email"] or "").strip():
-            execute("UPDATE Customers SET email = ? WHERE customer_id = ?", (contact, customer_id))
-    elif source_name in ("WhatsApp", "Phone Call"):
-        cust = query_one("SELECT phone FROM Customers WHERE customer_id = ?", (customer_id,))
-        if cust and not (cust["phone"] or "").strip():
-            execute("UPDATE Customers SET phone = ? WHERE customer_id = ?", (contact, customer_id))
 
 
 # --------------------------------------------------------------------------- #
@@ -598,6 +529,15 @@ def create_bill(customer_id, item_id, job_description, delivery_datetime,
     )
     generate_job_stages(bill_id, selected_job_types)
     return bill_id
+
+
+def bill_for_enquiry(enquiry_id):
+    """The bill already created from an enquiry, if any — used to block duplicate jobs."""
+    return query_one(
+        "SELECT bill_id, overall_status FROM Bill WHERE enquiry_id = ? "
+        "ORDER BY bill_id LIMIT 1",
+        (enquiry_id,),
+    )
 
 
 def convert_enquiry(enquiry_id):

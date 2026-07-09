@@ -52,7 +52,7 @@ st.subheader("📋 Customers")
 customers = query(
     """
     SELECT c.customer_id, c.customer_name, c.contact_person, c.phone, c.email, c.address,
-           (SELECT COUNT(*) FROM Enquiry e WHERE e.customer_id = c.customer_id) AS enquiries,
+           (SELECT COUNT(*) FROM Enquiry e WHERE e.customer_name = c.customer_name) AS enquiries,
            (SELECT COUNT(*) FROM Bill b    WHERE b.customer_id = c.customer_id) AS bills
     FROM Customers c
     ORDER BY c.customer_name
